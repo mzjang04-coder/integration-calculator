@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Integration Calculator & AI Tutor</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJS for formula parsing and calculation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+    <!-- KaTeX for high-performance math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <style>
+        /* Custom scrollbar for visual panels */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col font-sans antialiased overflow-hidden">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex flex-wrap justify-between items-center gap-4 shrink-0 z-10">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-lg shadow-indigo-500/20">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                    Visual Calculus <span class="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-semibold border border-indigo-500/30">Integration</span>
+                </h1>
+                <p class="text-xs text-slate-400">Interactive Area Estimator & Step-by-Step AI Solver</p>
+            </div>
+        </div>
+        
+        <!-- Preset Controls -->
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400 font-medium hidden sm:inline">Presets:</span>
+            <div class="flex gap-1.5 flex-wrap">
+                <button onclick="loadPreset('x^2 - 2*x + 1', 0, 3)" class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">Parabola</button>
+                <button onclick="loadPreset('sin(x)', 0, 3.14159)" class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">Sine Wave</button>
+                <button onclick="loadPreset('exp(-x^2)', -2, 2)" class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">Gaussian</button>
+                <button onclick="loadPreset('3 * cos(x) * sin(x/2)', -3, 5)" class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">Wave Harmonic</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+        
+        <!-- Sidebar Controls -->
+        <div class="w-full lg:w-[420px] bg-slate-900 border-r border-slate-800 flex flex-col overflow-y-auto shrink-0 p-5 space-y-6">
+            
+            <!-- Section 1: Function Configuration -->
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400">1. Define Function</h2>
+                    <span id="latex-preview" class="text-sm text-indigo-400 font-serif"></span>
+                </div>
+                
+                <div class="space-y-3">
+                    <div class="relative">
+                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 font-serif font-bold text-lg">f(x) =</span>
+                        <input type="text" id="function-input" value="x^2 - 2*x + 1" 
+                               class="w-full pl-16 pr-10 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                               placeholder="e.g., x^2 + 2*x">
+                        <button id="clear-input" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div id="input-error" class="text-xs text-red-400 hidden flex items-center gap-1.5">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span id="error-message">Invalid formula syntax.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Integration Limits -->
+            <div class="space-y-4">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400">2. Limits of Integration</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label class="block text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Lower Limit (a)</label>
+                        <input type="number" id="limit-a" step="0.1" value="0" 
+                               class="w-full bg-transparent text-lg text-white font-semibold font-mono focus:outline-none">
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <label class="block text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Upper Limit (b)</label>
+                        <input type="number" id="limit-b" step="0.1" value="3" 
+                               class="w-full bg-transparent text-lg text-white font-semibold font-mono focus:outline-none">
+                    </div>
+                </div>
+                <div class="text-[11px] text-slate-500 flex justify-between px-1">
+                    <span>💡 Tip: Click & drag vertical boundary lines on the graph to adjust limits.</span>
+                </div>
+            </div>
+
+            <!-- Section 3: Approximation Method (Riemann Visualizer) -->
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400">3. Approximation Method</h2>
+                    <span id="method-indicator" class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">Interactive</span>
+                </div>
+
+                <div class="space-y-3">
+                    <select id="calc-method" class="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <option value="exact">Exact Integral (Analytical Approximation)</option>
+                        <option value="left">Left Riemann Sum</option>
+                        <option value="right" selected>Right Riemann Sum</option>
+                        <option value="midpoint">Midpoint Riemann Sum</option>
+                        <option value="trapezoidal">Trapezoidal Rule</option>
+                        <option value="simpsons">Simpson's Rule</option>
+                    </select>
+
+                    <div id="interval-container" class="space-y-2 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400 font-medium">Subintervals (n):</span>
+                            <span id="n-val" class="font-bold text-indigo-400 font-mono text-sm">12</span>
+                        </div>
+                        <input type="range" id="intervals-n" min="2" max="100" step="1" value="12" 
+                               class="w-full accent-indigo-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-[10px] text-slate-500 px-0.5">
+                            <span>n = 2 (Fast/Rough)</span>
+                            <span>n = 100 (Very Precise)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Integration Results Comparison -->
+            <div class="space-y-3 pt-2">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400">4. Calculation Results</h2>
+                <div class="space-y-2">
+                    <div class="bg-indigo-950/30 border border-indigo-500/20 rounded-xl p-4 flex justify-between items-center">
+                        <div>
+                            <p class="text-xs text-indigo-300 font-semibold uppercase tracking-wide">Calculated Integral</p>
+                            <h3 id="exact-integral-val" class="text-2xl font-bold font-mono text-white mt-1">--</h3>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-slate-400">High Resolution</p>
+                            <p class="text-xs text-slate-500 font-mono mt-1">Simpson (n=2000)</p>
+                        </div>
+                    </div>
+
+                    <div id="approx-result-box" class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex justify-between items-center transition-all">
+                        <div>
+                            <p id="approx-label" class="text-xs text-emerald-400 font-semibold uppercase tracking-wide">Right Sum Estimate</p>
+                            <h3 id="approx-val" class="text-2xl font-bold font-mono text-white mt-1">--</h3>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-slate-400">Numerical Error</p>
+                            <span id="error-percentage" class="inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1 bg-red-500/10 text-red-400 border border-red-500/20 font-mono">
+                                --%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Step-by-Step Callout -->
+            <button id="ask-ai-btn" class="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white py-3.5 px-4 rounded-xl font-medium shadow-lg shadow-indigo-600/10 hover:shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 mt-auto shrink-0 border border-indigo-400/20">
+                <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                <span>Explain Integration Steps (AI)</span>
+            </button>
+
+        </div>
+
+        <!-- Right Side: Visualization and AI output -->
+        <div class="flex-1 flex flex-col min-h-0 bg-slate-950">
+            
+            <!-- Graph Visualizer Panel -->
+            <div class="flex-1 relative border-b border-slate-900 min-h-[300px] flex flex-col p-4">
+                <!-- Overlay badge controllers -->
+                <div class="absolute top-6 left-6 z-10 flex gap-2">
+                    <span id="formula-badge" class="px-3 py-1.5 text-xs font-semibold bg-slate-900/90 border border-slate-700/80 rounded-lg text-slate-200 backdrop-blur font-serif shadow-xl">
+                        f(x) = x^2 - 2x + 1
+                    </span>
+                    <span id="limit-badge" class="px-3 py-1.5 text-xs font-semibold bg-slate-900/90 border border-slate-700/80 rounded-lg text-indigo-400 backdrop-blur font-mono shadow-xl">
+                        [0.00, 3.00]
+                    </span>
+                </div>
+
+                <div class="absolute top-6 right-6 z-10 flex gap-1.5">
+                    <button id="zoom-in" title="Zoom In" class="p-2 bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-lg transition backdrop-blur">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </button>
+                    <button id="zoom-out" title="Zoom Out" class="p-2 bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-lg transition backdrop-blur">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                    </button>
+                    <button id="zoom-reset" title="Reset View" class="p-2 bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-700 rounded-lg transition backdrop-blur">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Main Drawing Canvas -->
+                <div class="flex-1 w-full relative overflow-hidden rounded-2xl bg-slate-900/30 border border-slate-900/80">
+                    <canvas id="graph-canvas" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+                </div>
+            </div>
+
+            <!-- AI Explanations Panel -->
+            <div id="ai-panel" class="h-1/2 min-h-[220px] max-h-[450px] border-t border-slate-800 bg-slate-900/50 backdrop-blur-md flex flex-col overflow-hidden transition-all duration-300 transform translate-y-full absolute bottom-0 left-0 right-0 lg:relative lg:translate-y-0 lg:h-[350px]">
+                <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-900 flex justify-between items-center shrink-0">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse"></div>
+                        <h3 class="text-sm font-semibold tracking-wide text-slate-200 uppercase">AI Symbolic Steps & Rule Breakdown</h3>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="close-ai-panel" class="text-slate-400 hover:text-slate-200 transition text-xs flex items-center gap-1 bg-slate-800 px-2 py-1 rounded border border-slate-700">
+                            Close Panel
+                        </button>
+                    </div>
+                </div>
+
+                <div id="ai-content-scroll" class="flex-1 overflow-y-auto p-6 space-y-4">
+                    <!-- Default State -->
+                    <div id="ai-default-state" class="flex flex-col items-center justify-center text-center h-full py-8 space-y-3">
+                        <div class="p-4 bg-slate-800/40 rounded-full border border-slate-700/50 text-slate-500">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                            </svg>
+                        </div>
+                        <h4 class="text-slate-300 font-semibold">Want to see the steps?</h4>
+                        <p class="text-xs text-slate-500 max-w-sm">
+                            Click the <span class="text-indigo-400 font-medium">"Explain Integration Steps"</span> button on the sidebar. Our Gemini calculus agent will generate a full symbolic breakdown and list of integration rules used.
+                        </p>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="ai-loading-state" class="hidden flex flex-col items-center justify-center text-center h-full py-8 space-y-4">
+                        <div class="relative w-12 h-12">
+                            <div class="absolute inset-0 rounded-full border-4 border-indigo-500/20"></div>
+                            <div class="absolute inset-0 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin"></div>
+                        </div>
+                        <div>
+                            <h4 class="text-slate-200 font-medium text-sm">Consulting Gemini Mathematics Engine...</h4>
+                            <p class="text-xs text-slate-500 mt-1">Analyzing rules, limits, and step-by-step antiderivatives...</p>
+                        </div>
+                    </div>
+
+                    <!-- Main AI Response Content (Markdown & KaTeX) -->
+                    <div id="ai-response" class="hidden prose prose-invert max-w-none text-slate-300 text-sm leading-relaxed space-y-4">
+                        <!-- Filled dynamically -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Script Block -->
+    <script>
+        // Set Gemini API details
+        const apiKey = ""; // Will be auto-populated at runtime by sandbox
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // State Manager
+        const state = {
+            functionStr: "x^2 - 2*x + 1",
+            parsedExpr: null,
+            limitA: 0.0,
+            limitB: 3.0,
+            method: "right", // left, right, midpoint, trapezoidal, simpsons, exact
+            n: 12,
+            
+            // Viewport parameters for the graph canvas
+            xMin: -2.0,
+            xMax: 5.0,
+            yMin: -2.0,
+            yMax: 6.0,
+            
+            // Interaction tracking
+            isDraggingLimit: null, // 'a' or 'b'
+            hoveredLimit: null, // 'a' or 'b'
+            dragStartX: 0,
+            dragStartVal: 0,
+            
+            // Cached integrations
+            exactValue: 0.0,
+            approxValue: 0.0,
+            errorPct: 0.0
+        };
+
+        // DOM elements
+        const canvas = document.getElementById("graph-canvas");
+        const ctx = canvas.getContext("2d");
+        const inputFunc = document.getElementById("function-input");
+        const clearInputBtn = document.getElementById("clear-input");
+        const inputError = document.getElementById("input-error");
+        const errorMessage = document.getElementById("error-message");
+        const valLimitA = document.getElementById("limit-a");
+        const valLimitB = document.getElementById("limit-b");
+        const calcMethod = document.getElementById("calc-method");
+        const intervalsN = document.getElementById("intervals-n");
+        const nValDisplay = document.getElementById("n-val");
+        const intervalContainer = document.getElementById("interval-container");
+        
+        const textExactIntegral = document.getElementById("exact-integral-val");
+        const textApproxValue = document.getElementById("approx-val");
+        const textApproxLabel = document.getElementById("approx-label");
+        const textErrorPercentage = document.getElementById("error-percentage");
+        const approxResultBox = document.getElementById("approx-result-box");
+        
+        const formulaBadge = document.getElementById("formula-badge");
+        const limitBadge = document.getElementById("limit-badge");
+        
+        // AI DOM
+        const askAiBtn = document.getElementById("ask-ai-btn");
+        const aiPanel = document.getElementById("ai-panel");
+        const closeAiPanelBtn = document.getElementById("close-ai-panel");
+        const aiDefaultState = document.getElementById("ai-default-state");
+        const aiLoadingState = document.getElementById("ai-loading-state");
+        const aiResponse = document.getElementById("ai-response");
+
+        // Set viewport dimension initially
+        function resizeCanvas() {
+            const rect = canvas.parentNode.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            canvas.style.width = rect.width + "px";
+            canvas.style.height = rect.height + "px";
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            draw();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Initialize State and parsers
+        function init() {
+            parseCurrentFunction();
+            updateCalculations();
+            resizeCanvas();
+            renderLatexPreview();
+            
+            // Attach inputs
+            inputFunc.addEventListener("input", () => {
+                if (parseCurrentFunction()) {
+                    updateCalculations();
+                    draw();
+                    renderLatexPreview();
+                }
+            });
+            
+            clearInputBtn.addEventListener("click", () => {
+                inputFunc.value = "";
+                inputFunc.focus();
+                parseCurrentFunction();
+            });
+
+            valLimitA.addEventListener("input", (e) => {
+                let val = parseFloat(e.target.value);
+                if (!isNaN(val)) {
+                    state.limitA = val;
+                    updateCalculations();
+                    draw();
+                }
+            });
+
+            valLimitB.addEventListener("input", (e) => {
+                let val = parseFloat(e.target.value);
+                if (!isNaN(val)) {
+                    state.limitB = val;
+                    updateCalculations();
+                    draw();
+                }
+            });
+
+            calcMethod.addEventListener("change", (e) => {
+                state.method = e.target.value;
+                if (state.method === "exact") {
+                    intervalContainer.classList.add("opacity-40", "pointer-events-none");
+                } else {
+                    intervalContainer.classList.remove("opacity-40", "pointer-events-none");
+                }
+                updateCalculations();
+                draw();
+            });
+
+            intervalsN.addEventListener("input", (e) => {
+                state.n = parseInt(e.target.value);
+                nValDisplay.textContent = state.n;
+                updateCalculations();
+                draw();
+            });
+
+            // Graph Interaction Zoom/Reset
+            document.getElementById("zoom-in").addEventListener("click", () => zoom(0.8));
+            document.getElementById("zoom-out").addEventListener("click", () => zoom(1.25));
+            document.getElementById("zoom-reset").addEventListener("click", () => {
+                state.xMin = -2.0; state.xMax = 5.0;
+                state.yMin = -2.0; state.yMax = 6.0;
+                draw();
+            });
+
+            // Handle Dragging of limits directly on Canvas
+            canvas.addEventListener("mousedown", handleMouseDown);
+            canvas.addEventListener("mousemove", handleMouseMove);
+            window.addEventListener("mouseup", handleMouseUp);
+
+            canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+            canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+            window.addEventListener("touchend", handleTouchEnd);
+
+            // Ask AI Button Action
+            askAiBtn.addEventListener("click", queryGeminiSymbolicIntegration);
+            closeAiPanelBtn.addEventListener("click", () => {
+                aiPanel.classList.add("translate-y-full");
+                // For desktop, let's keep it visible but collapse or hide
+                if (window.innerWidth >= 1024) {
+                    aiPanel.classList.add("hidden");
+                }
+            });
+        }
+
+        // Parse math function safely
+        function parseCurrentFunction() {
+            state.functionStr = inputFunc.value.trim();
+            if (!state.functionStr) {
+                inputError.classList.add("hidden");
+                state.parsedExpr = null;
+                return false;
+            }
+            try {
+                // Ensure mathjs compiles valid equations
+                const compiled = math.compile(state.functionStr);
+                // Pre-evaluate a dummy value to guarantee x works as independent variable
+                compiled.evaluate({ x: 1 });
+                state.parsedExpr = compiled;
+                inputError.classList.add("hidden");
+                formulaBadge.textContent = "f(x) = " + state.functionStr;
+                return true;
+            } catch (err) {
+                errorMessage.textContent = err.message || "Invalid mathematical syntax.";
+                inputError.classList.remove("hidden");
+                state.parsedExpr = null;
+                return false;
+            }
+        }
+
+        function renderLatexPreview() {
+            const previewEl = document.getElementById("latex-preview");
+            if (!state.parsedExpr) {
+                previewEl.innerHTML = "";
+                return;
+            }
+            try {
+                const node = math.parse(state.functionStr);
+                const latex = node.toTex({ parenthesis: 'keep' });
+                katex.render(latex, previewEl, { throwOnError: false });
+            } catch (e) {
+                previewEl.innerHTML = "";
+            }
+        }
+
+        // Quick Function Loader Presets
+        function loadPreset(funcStr, a, b) {
+            inputFunc.value = funcStr;
+            valLimitA.value = a.toFixed(2);
+            valLimitB.value = b.toFixed(2);
+            state.limitA = a;
+            state.limitB = b;
+            
+            // Smart auto-viewport adjustment based on limits
+            const dist = Math.abs(b - a);
+            state.xMin = a - dist * 0.4;
+            state.xMax = b + dist * 0.4;
+            // Handle edge case of single point or negative range
+            if (state.xMax <= state.xMin) {
+                state.xMin = -2; state.xMax = 5;
+            }
+            
+            parseCurrentFunction();
+            
+            // Adjust y-limits based on typical range
+            adjustYViewport();
+            
+            updateCalculations();
+            draw();
+            renderLatexPreview();
+        }
+
+        function adjustYViewport() {
+            if (!state.parsedExpr) return;
+            let yMin = Infinity;
+            let yMax = -Infinity;
+            const steps = 100;
+            const delta = (state.xMax - state.xMin) / steps;
+            
+            for (let i = 0; i <= steps; i++) {
+                const cx = state.xMin + i * delta;
+                try {
+                    const cy = state.parsedExpr.evaluate({ x: cx });
+                    if (typeof cy === 'number' && !isNaN(cy) && isFinite(cy)) {
+                        yMin = Math.min(yMin, cy);
+                        yMax = Math.max(yMax, cy);
+                    }
+                } catch(e) {}
+            }
+            if (yMin !== Infinity && yMax !== -Infinity) {
+                const span = yMax - yMin;
+                state.yMin = yMin - Math.max(1, span * 0.2);
+                state.yMax = yMax + Math.max(1, span * 0.2);
+            }
+        }
+
+        function zoom(factor) {
+            const centerX = (state.xMin + state.xMax) / 2;
+            const centerY = (state.yMin + state.yMax) / 2;
+            const dx = (state.xMax - state.xMin) * factor;
+            const dy = (state.yMax - state.yMin) * factor;
+            state.xMin = centerX - dx / 2;
+            state.xMax = centerX + dx / 2;
+            state.yMin = centerY - dy / 2;
+            state.yMax = centerY + dy / 2;
+            draw();
+        }
+
+        // Map math coordinates to canvas pixels
+        function toPixelX(mathX) {
+            const w = canvas.width / window.devicePixelRatio;
+            return ((mathX - state.xMin) / (state.xMax - state.xMin)) * w;
+        }
+
+        function toPixelY(mathY) {
+            const h = canvas.height / window.devicePixelRatio;
+            return h - ((mathY - state.yMin) / (state.yMax - state.yMin)) * h;
+        }
+
+        // Map canvas pixels back to mathematical values
+        function toMathX(pixelX) {
+            const w = canvas.width / window.devicePixelRatio;
+            return state.xMin + (pixelX / w) * (state.xMax - state.xMin);
+        }
+
+        function toMathY(pixelY) {
+            const h = canvas.height / window.devicePixelRatio;
+            return state.yMin + ((h - pixelY) / h) * (state.yMax - state.yMin);
+        }
+
+        // Numerical Integration Helper Functions
+        function evaluateFn(x) {
+            if (!state.parsedExpr) return 0;
+            try {
+                const res = state.parsedExpr.evaluate({ x: x });
+                return typeof res === 'number' && !isNaN(res) ? res : 0;
+            } catch (e) {
+                return 0;
+            }
+        }
+
+        function calcExactIntegral() {
+            // Highly precise numeric approximation as the "exact" visual baseline (Simpson's with high intervals)
+            const nHigh = 2000;
+            return runSimpsonsRule(state.limitA, state.limitB, nHigh);
+        }
+
+        function runLeftRiemann(a, b, n) {
+            const h = (b - a) / n;
+            let sum = 0;
+            for (let i = 0; i < n; i++) {
+                sum += evaluateFn(a + i * h);
+            }
+            return sum * h;
+        }
+
+        function runRightRiemann(a, b, n) {
+            const h = (b - a) / n;
+            let sum = 0;
+            for (let i = 1; i <= n; i++) {
+                sum += evaluateFn(a + i * h);
+            }
+            return sum * h;
+        }
+
+        function runMidpointRule(a, b, n) {
+            const h = (b - a) / n;
+            let sum = 0;
+            for (let i = 0; i < n; i++) {
+                sum += evaluateFn(a + (i + 0.5) * h);
+            }
+            return sum * h;
+        }
+
+        function runTrapezoidalRule(a, b, n) {
+            const h = (b - a) / n;
+            let sum = 0.5 * (evaluateFn(a) + evaluateFn(b));
+            for (let i = 1; i < n; i++) {
+                sum += evaluateFn(a + i * h);
+            }
+            return sum * h;
+        }
+
+        function runSimpsonsRule(a, b, n) {
+            // Simpson's rule requires even number of intervals
+            if (n % 2 !== 0) n++;
+            const h = (b - a) / n;
+            let sum = evaluateFn(a) + evaluateFn(b);
+            for (let i = 1; i < n; i++) {
+                const x = a + i * h;
+                sum += (i % 2 === 0 ? 2 : 4) * evaluateFn(x);
+            }
+            return (sum * h) / 3;
+        }
+
+        function updateCalculations() {
+            if (!state.parsedExpr) {
+                textExactIntegral.textContent = "--";
+                textApproxValue.textContent = "--";
+                textErrorPercentage.textContent = "--%";
+                return;
+            }
+
+            // Sync limit badges & input values
+            valLimitA.value = parseFloat(state.limitA.toFixed(4));
+            valLimitB.value = parseFloat(state.limitB.toFixed(4));
+            limitBadge.textContent = `[${state.limitA.toFixed(2)}, ${state.limitB.toFixed(2)}]`;
+
+            // Calculate highly precise "analytical" target baseline
+            state.exactValue = calcExactIntegral();
+            textExactIntegral.textContent = state.exactValue.toFixed(5);
+
+            // Compute the chosen visual approximation method
+            const method = state.method;
+            const n = state.n;
+            const a = state.limitA;
+            const b = state.limitB;
+            
+            switch (method) {
+                case 'exact':
+                    state.approxValue = state.exactValue;
+                    textApproxLabel.textContent = "Exact Baseline";
+                    break;
+                case 'left':
+                    state.approxValue = runLeftRiemann(a, b, n);
+                    textApproxLabel.textContent = `Left Sum (n=${n})`;
+                    break;
+                case 'right':
+                    state.approxValue = runRightRiemann(a, b, n);
+                    textApproxLabel.textContent = `Right Sum (n=${n})`;
+                    break;
+                case 'midpoint':
+                    state.approxValue = runMidpointRule(a, b, n);
+                    textApproxLabel.textContent = `Midpoint Sum (n=${n})`;
+                    break;
+                case 'trapezoidal':
+                    state.approxValue = runTrapezoidalRule(a, b, n);
+                    textApproxLabel.textContent = `Trapezoidal (n=${n})`;
+                    break;
+                case 'simpsons':
+                    state.approxValue = runSimpsonsRule(a, b, n);
+                    textApproxLabel.textContent = `Simpson's (n=${n})`;
+                    break;
+            }
+
+            textApproxValue.textContent = state.approxValue.toFixed(5);
+
+            // Calculate percentage error
+            if (Math.abs(state.exactValue) > 1e-9) {
+                state.errorPct = Math.abs((state.approxValue - state.exactValue) / state.exactValue) * 100;
+            } else {
+                state.errorPct = Math.abs(state.approxValue - state.exactValue) * 100;
+            }
+
+            // Update error badge look
+            if (state.method === 'exact') {
+                textErrorPercentage.textContent = "0.00%";
+                textErrorPercentage.className = "inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono";
+            } else {
+                textErrorPercentage.textContent = (state.errorPct > 100 ? '>100%' : state.errorPct.toFixed(2) + "%");
+                if (state.errorPct < 1.0) {
+                    textErrorPercentage.className = "inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono";
+                } else if (state.errorPct < 10.0) {
+                    textErrorPercentage.className = "inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono";
+                } else {
+                    textErrorPercentage.className = "inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1 bg-red-500/10 text-red-400 border border-red-500/20 font-mono";
+                }
+            }
+        }
+
+        // --- DRAWING / GRAPHICS PIPELINE ---
+        function draw() {
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+            ctx.clearRect(0, 0, w, h);
+
+            // Draw Background Grid
+            drawGrid(w, h);
+            
+            // Shading of exact area (under curve)
+            if (state.parsedExpr) {
+                drawExactShading();
+                
+                // Draw Approximation Shapes (rectangles or trapezoids) if selected
+                if (state.method !== 'exact') {
+                    drawApproximationShapes();
+                }
+
+                // Draw main function curve
+                drawFunctionCurve(w, h);
+            }
+
+            // Draw X and Y Axes lines
+            drawAxes(w, h);
+
+            // Draw Limit Boundary Drag Lines
+            drawLimitBoundaries();
+        }
+
+        function drawGrid(w, h) {
+            ctx.strokeStyle = '#1e293b'; // dark slate grid
+            ctx.lineWidth = 1;
+            ctx.fillStyle = '#64748b'; // slate labels
+            ctx.font = '10px font-mono, sans-serif';
+
+            // Auto-detect optimal step sizing
+            const rx = state.xMax - state.xMin;
+            let stepX = 1.0;
+            if (rx < 2.0) stepX = 0.2;
+            else if (rx > 15.0) stepX = 5.0;
+            else if (rx > 50.0) stepX = 10.0;
+
+            const ry = state.yMax - state.yMin;
+            let stepY = 1.0;
+            if (ry < 2.0) stepY = 0.2;
+            else if (ry > 15.0) stepY = 5.0;
+            else if (ry > 50.0) stepY = 10.0;
+
+            // X grid lines
+            const startX = Math.floor(state.xMin / stepX) * stepX;
+            for (let x = startX; x <= state.xMax; x += stepX) {
+                const px = toPixelX(x);
+                ctx.beginPath();
+                ctx.moveTo(px, 0);
+                ctx.lineTo(px, h);
+                ctx.stroke();
+
+                // Draw label at bottom/axis intersection
+                const pyAxis = Math.max(10, Math.min(h - 10, toPixelY(0)));
+                ctx.fillText(x.toFixed(1), px + 4, pyAxis - 4);
+            }
+
+            // Y grid lines
+            const startY = Math.floor(state.yMin / stepY) * stepY;
+            for (let y = startY; y <= state.yMax; y += stepY) {
+                const py = toPixelY(y);
+                ctx.beginPath();
+                ctx.moveTo(0, py);
+                ctx.lineTo(w, py);
+                ctx.stroke();
+
+                // Draw label at left/axis intersection
+                const pxAxis = Math.max(10, Math.min(w - 30, toPixelX(0)));
+                if (Math.abs(y) > 0.001) { // avoid cluttering origin
+                    ctx.fillText(y.toFixed(1), pxAxis + 4, py - 4);
+                }
+            }
+        }
+
+        function drawAxes(w, h) {
+            ctx.strokeStyle = '#475569'; // prominent gray
+            ctx.lineWidth = 1.5;
+
+            // X-Axis
+            const py = toPixelY(0);
+            ctx.beginPath();
+            ctx.moveTo(0, py);
+            ctx.lineTo(w, py);
+            ctx.stroke();
+
+            // Y-Axis
+            const px = toPixelX(0);
+            ctx.beginPath();
+            ctx.moveTo(px, 0);
+            ctx.lineTo(px, h);
+            ctx.stroke();
+        }
+
+        // Draw exact shaded region
+        function drawExactShading() {
+            const a = state.limitA;
+            const b = state.limitB;
+            const start = Math.min(a, b);
+            const end = Math.max(a, b);
+            
+            ctx.fillStyle = 'rgba(79, 70, 229, 0.15)'; // Elegant Indigo transparency
+            ctx.beginPath();
+            
+            // Map step widths to pixels
+            const steps = 300;
+            const stepVal = (end - start) / steps;
+            
+            const pStart = toPixelX(start);
+            const pZeroY = toPixelY(0);
+            ctx.moveTo(pStart, pZeroY);
+
+            for (let i = 0; i <= steps; i++) {
+                const xVal = start + i * stepVal;
+                const yVal = evaluateFn(xVal);
+                ctx.lineTo(toPixelX(xVal), toPixelY(yVal));
+            }
+            
+            ctx.lineTo(toPixelX(end), pZeroY);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Draw the visual rectangles or trapezoids
+        function drawApproximationShapes() {
+            const a = state.limitA;
+            const b = state.limitB;
+            const n = state.n;
+            const h = (b - a) / n;
+            const method = state.method;
+
+            // Set styling
+            ctx.strokeStyle = '#10b981'; // Vivid emerald border
+            ctx.lineWidth = 1;
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.25)'; // Soft emerald fill
+
+            const pZeroY = toPixelY(0);
+
+            for (let i = 0; i < n; i++) {
+                const xl = a + i * h;
+                const xr = xl + h;
+                
+                const pxl = toPixelX(xl);
+                const pxr = toPixelX(xr);
+                
+                let yVal = 0;
+                
+                if (method === 'left') {
+                    yVal = evaluateFn(xl);
+                    drawRectangle(pxl, pxr, yVal, pZeroY);
+                } else if (method === 'right') {
+                    yVal = evaluateFn(xr);
+                    drawRectangle(pxl, pxr, yVal, pZeroY);
+                } else if (method === 'midpoint') {
+                    yVal = evaluateFn(xl + h/2);
+                    drawRectangle(pxl, pxr, yVal, pZeroY);
+                } else if (method === 'trapezoidal') {
+                    const yl = evaluateFn(xl);
+                    const yr = evaluateFn(xr);
+                    drawTrapezoid(pxl, pxr, yl, yr, pZeroY);
+                } else if (method === 'simpsons') {
+                    // Draw Simpson's visual approximation curve segments
+                    const yl = evaluateFn(xl);
+                    const ym = evaluateFn(xl + h/2);
+                    const yr = evaluateFn(xr);
+                    drawSimpsonSegment(pxl, pxr, xl, xr, yl, ym, yr, pZeroY);
+                }
+            }
+        }
+
+        function drawRectangle(px1, px2, yVal, pZeroY) {
+            const pyVal = toPixelY(yVal);
+            ctx.beginPath();
+            ctx.rect(px1, Math.min(pyVal, pZeroY), px2 - px1, Math.abs(pyVal - pZeroY));
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        function drawTrapezoid(px1, px2, y1, y2, pZeroY) {
+            const py1 = toPixelY(y1);
+            const py2 = toPixelY(y2);
+            ctx.beginPath();
+            ctx.moveTo(px1, pZeroY);
+            ctx.lineTo(px1, py1);
+            ctx.lineTo(px2, py2);
+            ctx.lineTo(px2, pZeroY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        function drawSimpsonSegment(px1, px2, xl, xr, yl, ym, yr, pZeroY) {
+            // Simpson's interpolates a quadratic segment over the subinterval
+            ctx.beginPath();
+            ctx.moveTo(px1, pZeroY);
+            ctx.lineTo(px1, toPixelY(yl));
+
+            // Generate quadratic curve visually
+            const steps = 10;
+            const delta = (xr - xl) / steps;
+            
+            // Standard Lagrange quadratic interpolation algorithm
+            const x0 = xl;
+            const x1 = xl + (xr-xl)/2;
+            const x2 = xr;
+            
+            for (let j = 1; j <= steps; j++) {
+                const xVal = xl + j * delta;
+                const L0 = ((xVal - x1) * (xVal - x2)) / ((x0 - x1) * (x0 - x2));
+                const L1 = ((xVal - x0) * (xVal - x2)) / ((x1 - x0) * (x1 - x2));
+                const L2 = ((xVal - x0) * (xVal - x1)) / ((x2 - x0) * (x2 - x1));
+                const interpY = yl * L0 + ym * L1 + yr * L2;
+                ctx.lineTo(toPixelX(xVal), toPixelY(interpY));
+            }
+
+            ctx.lineTo(px2, pZeroY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        // Draw main function curve line
+        function drawFunctionCurve(w, h) {
+            ctx.strokeStyle = '#ffffff'; // Crisp white line for the primary function
+            ctx.lineWidth = 3.5;
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.15)';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+
+            const steps = 400;
+            const delta = (state.xMax - state.xMin) / steps;
+            let isFirst = true;
+
+            for (let i = 0; i <= steps; i++) {
+                const xVal = state.xMin + i * delta;
+                const yVal = evaluateFn(xVal);
+                
+                // Keep points within dynamic boundary sanity checks
+                if (typeof yVal === 'number' && !isNaN(yVal) && isFinite(yVal)) {
+                    const px = toPixelX(xVal);
+                    const py = toPixelY(yVal);
+                    
+                    if (isFirst) {
+                        ctx.moveTo(px, py);
+                        isFirst = false;
+                    } else {
+                        ctx.lineTo(px, py);
+                    }
+                }
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0; // reset
+        }
+
+        // Draw boundaries for limits with drag handles
+        function drawLimitBoundaries() {
+            drawSingleLimitBoundary(state.limitA, 'a');
+            drawSingleLimitBoundary(state.limitB, 'b');
+        }
+
+        function drawSingleLimitBoundary(limitVal, label) {
+            const px = toPixelX(limitVal);
+            const h = canvas.height / window.devicePixelRatio;
+
+            const isHovered = (state.hoveredLimit === label || state.isDraggingLimit === label);
+
+            // Colored lines: Indigo for boundaries
+            ctx.strokeStyle = isHovered ? '#6366f1' : 'rgba(99, 102, 241, 0.6)';
+            ctx.lineWidth = isHovered ? 3 : 2;
+            ctx.setLineDash(isHovered ? [] : [6, 4]);
+
+            ctx.beginPath();
+            ctx.moveTo(px, 0);
+            ctx.lineTo(px, h);
+            ctx.stroke();
+            ctx.setLineDash([]); // clear dash
+
+            // Draw circular grab handler at the horizontal axis center point
+            const pyCenter = h / 2;
+            ctx.fillStyle = isHovered ? '#818cf8' : '#4f46e5';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            ctx.arc(px, pyCenter, isHovered ? 9 : 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Render boundary label
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label.toUpperCase(), px, pyCenter - 14);
+        }
+
+        // --- INTERACTION / DRAGGING ---
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function detectLimitHandleUnderCursor(mousePos) {
+            const h = canvas.height / window.devicePixelRatio;
+            const threshold = 18; // px detection radius
+
+            const pxA = toPixelX(state.limitA);
+            const pxB = toPixelX(state.limitB);
+            
+            // We check the full vertical range or centering on handle
+            const distA = Math.abs(mousePos.x - pxA);
+            const distB = Math.abs(mousePos.x - pxB);
+
+            if (distA < threshold && distA < distB) {
+                return 'a';
+            } else if (distB < threshold) {
+                return 'b';
+            }
+            return null;
+        }
+
+        function handleMouseDown(e) {
+            const mousePos = getMousePos(e);
+            const detected = detectLimitHandleUnderCursor(mousePos);
+            if (detected) {
+                state.isDraggingLimit = detected;
+                state.dragStartX = mousePos.x;
+                state.dragStartVal = detected === 'a' ? state.limitA : state.limitB;
+                canvas.style.cursor = 'ew-resize';
+            }
+        }
+
+        function handleMouseMove(e) {
+            const mousePos = getMousePos(e);
+
+            if (state.isDraggingLimit) {
+                // Drag active: update model values
+                const dx = mousePos.x - state.dragStartX;
+                const widthInPixels = canvas.width / window.devicePixelRatio;
+                const mathDelta = (dx / widthInPixels) * (state.xMax - state.xMin);
+                const newVal = parseFloat((state.dragStartVal + mathDelta).toFixed(3));
+
+                if (state.isDraggingLimit === 'a') {
+                    state.limitA = newVal;
+                } else {
+                    state.limitB = newVal;
+                }
+                updateCalculations();
+                draw();
+            } else {
+                // Hover state check
+                const hoverDetect = detectLimitHandleUnderCursor(mousePos);
+                if (hoverDetect !== state.hoveredLimit) {
+                    state.hoveredLimit = hoverDetect;
+                    canvas.style.cursor = hoverDetect ? 'ew-resize' : 'crosshair';
+                    draw();
+                }
+            }
+        }
+
+        function handleMouseUp() {
+            if (state.isDraggingLimit) {
+                state.isDraggingLimit = null;
+                canvas.style.cursor = state.hoveredLimit ? 'ew-resize' : 'crosshair';
+                draw();
+            }
+        }
+
+        // Mobile touch support
+        function handleTouchStart(e) {
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const mousePos = getMousePos(touch);
+                const detected = detectLimitHandleUnderCursor(mousePos);
+                if (detected) {
+                    e.preventDefault(); // Stop scrolling bounce
+                    state.isDraggingLimit = detected;
+                    state.dragStartX = mousePos.x;
+                    state.dragStartVal = detected === 'a' ? state.limitA : state.limitB;
+                    draw();
+                }
+            }
+        }
+
+        function handleTouchMove(e) {
+            if (state.isDraggingLimit && e.touches.length === 1) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mousePos = getMousePos(touch);
+                const dx = mousePos.x - state.dragStartX;
+                const widthInPixels = canvas.width / window.devicePixelRatio;
+                const mathDelta = (dx / widthInPixels) * (state.xMax - state.xMin);
+                const newVal = parseFloat((state.dragStartVal + mathDelta).toFixed(3));
+
+                if (state.isDraggingLimit === 'a') {
+                    state.limitA = newVal;
+                } else {
+                    state.limitB = newVal;
+                }
+                updateCalculations();
+                draw();
+            }
+        }
+
+        function handleTouchEnd() {
+            state.isDraggingLimit = null;
+            draw();
+        }
+
+
+        // --- GEMINI AI TUTOR INTEGRATION ---
+        async function queryGeminiSymbolicIntegration() {
+            if (!state.parsedExpr) return;
+
+            // Open AI Steps Panel & display loading state
+            aiPanel.classList.remove("hidden");
+            aiPanel.classList.remove("translate-y-full");
+            aiDefaultState.classList.add("hidden");
+            aiResponse.classList.add("hidden");
+            aiLoadingState.classList.remove("hidden");
+
+            // Document scroll auto-focusing
+            document.getElementById("ai-content-scroll").scrollTop = 0;
+
+            const formula = state.functionStr;
+            const a = state.limitA.toFixed(2);
+            const b = state.limitB.toFixed(2);
+
+            const systemPrompt = `You are an expert, encouraging Calculus Professor specializing in visual and step-by-step math breakdowns. 
+Your task is to analyze the user's integration equation, identify standard rules (power rule, u-substitution, trigonometric rules, etc.), solve the indefinite integral symbolically, and evaluate the definite integral over the specified boundaries.
+Always format your response cleanly utilizing appropriate mathematical notation. Render detailed equations using standard LaTeX enclosed in $ or $$. Use headers, bullet points, and neat paragraphs. Do NOT include html tags or raw scripts. Output directly in clean Markdown.`;
+
+            const query = `Provide a step-by-step analytical integration solution for:
+Function: $f(x) = ${formula}$
+Interval limits: $[a, b] = [${a}, ${b}]$
+
+Include:
+1. The symbolic indefinite integral result $\\int f(x) \\, dx$ including the constant of integration $C$.
+2. List of core integration rules used.
+3. Steps evaluating the definite integral $\\int_{${a}}^{${b}} f(x) \\, dx$ using the Fundamental Theorem of Calculus.
+4. Final precise numeric value.`;
+
+            // Call API with robust Exponential Backoff
+            let attempts = 0;
+            const maxAttempts = 5;
+            let success = false;
+            let resultText = "";
+
+            while (attempts < maxAttempts && !success) {
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: query }] }],
+                            systemInstruction: { parts: [{ text: systemPrompt }] }
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Empty response from mathematics model.";
+                        success = true;
+                    } else {
+                        throw new Error(`API returned status ${response.status}`);
+                    }
+                } catch (err) {
+                    attempts++;
+                    const delay = Math.pow(2, attempts) * 500; // 1s, 2s, 4s, etc.
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+
+            aiLoadingState.classList.add("hidden");
+
+            if (success) {
+                // Populate response
+                aiResponse.innerHTML = formatMarkdown(resultText);
+                aiResponse.classList.remove("hidden");
+                
+                // Trigger KaTeX rendering on generated response
+                renderMathInElement(aiResponse, {
+                    delimiters: [
+                        { left: "$$", right: "$$", display: true },
+                        { left: "$", right: "$", display: false },
+                        { left: "\\(", right: "\\)", display: false },
+                        { left: "\\[", right: "\\]", display: true }
+                    ],
+                    throwOnError: false
+                });
+            } else {
+                aiResponse.innerHTML = `
+                    <div class="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm">
+                        <h4 class="font-bold flex items-center gap-1.5 mb-1">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            Connection Failed
+                        </h4>
+                        Unable to connect to the Gemini tutor agent. Please verify your connection status and try again.
+                    </div>
+                `;
+                aiResponse.classList.remove("hidden");
+            }
+        }
+
+        // Tiny local Markdown syntax formatter for clean tutor rendering
+        function formatMarkdown(src) {
+            return src
+                .replace(/\n/g, '<br>')
+                .replace(/### (.*?)(?:<br>|$)/g, '<h4 class="text-white font-bold text-base mt-4 mb-2">$1</h4>')
+                .replace(/## (.*?)(?:<br>|$)/g, '<h3 class="text-white font-bold text-lg mt-5 mb-2 border-b border-slate-800 pb-1">$1</h3>')
+                .replace(/# (.*?)(?:<br>|$)/g, '<h2 class="text-indigo-400 font-bold text-xl mt-6 mb-3">$1</h2>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em class="text-slate-300 italic">$1</em>')
+                .replace(/- (.*?)(?:<br>|$)/g, '<div class="flex items-start gap-2 my-1"><span class="text-indigo-500 mt-1">•</span><span>$1</span></div>');
+        }
+
+        // Initialize App on DOM load
+        window.addEventListener("DOMContentLoaded", init);
+    </script>
+</body>
+</html>
